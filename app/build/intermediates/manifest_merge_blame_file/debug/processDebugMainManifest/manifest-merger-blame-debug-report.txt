@@ -1,0 +1,279 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.example.appmovil"
+4    android:versionCode="4"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="36" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:5:5-67
+11-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:5:22-64
+12    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+12-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:6:5-79
+12-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:6:22-76
+13    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+13-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:7:5-81
+13-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:7:22-78
+14    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+14-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:8:5-77
+14-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:8:22-74
+15    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+15-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:9:5-86
+15-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:9:22-83
+16    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+16-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:10:5-87
+16-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:10:22-84
+17    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+17-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:11:5-77
+17-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:11:22-74
+18    <uses-permission android:name="android.permission.WAKE_LOCK" />
+18-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:12:5-68
+18-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:12:22-65
+19    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+19-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:13:5-83
+19-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:13:22-80
+20    <uses-permission android:name="android.permission.CAMERA" />
+20-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:14:5-65
+20-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:14:22-62
+21
+22    <uses-feature
+22-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:15:5-85
+23        android:name="android.hardware.camera"
+23-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:15:19-57
+24        android:required="false" />
+24-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:15:58-82
+25
+26    <!-- Include required permissions for Google Maps API to run. -->
+27    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+27-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:23:5-79
+27-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:23:22-76
+28
+29    <uses-feature
+29-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:26:5-28:35
+30        android:glEsVersion="0x00020000"
+30-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:27:9-41
+31        android:required="true" />
+31-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:28:9-32
+32
+33    <queries>
+33-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:30:5-34:15
+34
+35        <!-- Needs to be explicitly declared on Android R+ -->
+36        <package android:name="com.google.android.apps.maps" />
+36-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:33:9-64
+36-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:33:18-61
+37    </queries>
+38
+39    <permission
+39-->[androidx.core:core:1.18.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cb86141145846f0b6dcfba97331d74c7\workspace\transformed\core-1.18.0\AndroidManifest.xml:22:5-24:47
+40        android:name="com.example.appmovil.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+40-->[androidx.core:core:1.18.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cb86141145846f0b6dcfba97331d74c7\workspace\transformed\core-1.18.0\AndroidManifest.xml:23:9-81
+41        android:protectionLevel="signature" />
+41-->[androidx.core:core:1.18.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cb86141145846f0b6dcfba97331d74c7\workspace\transformed\core-1.18.0\AndroidManifest.xml:24:9-44
+42
+43    <uses-permission android:name="com.example.appmovil.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+43-->[androidx.core:core:1.18.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cb86141145846f0b6dcfba97331d74c7\workspace\transformed\core-1.18.0\AndroidManifest.xml:26:5-97
+43-->[androidx.core:core:1.18.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cb86141145846f0b6dcfba97331d74c7\workspace\transformed\core-1.18.0\AndroidManifest.xml:26:22-94
+44
+45    <application
+45-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:17:5-66:19
+46        android:allowBackup="true"
+46-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:18:9-35
+47        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+47-->[androidx.core:core:1.18.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cb86141145846f0b6dcfba97331d74c7\workspace\transformed\core-1.18.0\AndroidManifest.xml:28:18-86
+48        android:dataExtractionRules="@xml/data_extraction_rules"
+48-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:19:9-65
+49        android:debuggable="true"
+50        android:extractNativeLibs="false"
+51        android:fullBackupContent="@xml/backup_rules"
+51-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:20:9-54
+52        android:icon="@mipmap/ic_launcher"
+52-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:21:9-43
+53        android:label="@string/app_name"
+53-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:22:9-41
+54        android:roundIcon="@mipmap/ic_launcher_round"
+54-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:23:9-54
+55        android:supportsRtl="true"
+55-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:24:9-35
+56        android:theme="@style/Theme.APPMOVIL"
+56-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:26:9-46
+57        android:usesCleartextTraffic="true" >
+57-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:25:9-44
+58        <activity
+58-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:27:9-37:20
+59            android:name="com.example.appmovil.MainActivity"
+59-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:28:13-41
+60            android:exported="true"
+60-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:29:13-36
+61            android:label="@string/app_name"
+61-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:30:13-45
+62            android:theme="@style/Theme.APPMOVIL" >
+62-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:31:13-50
+63            <intent-filter>
+63-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:32:13-36:29
+64                <action android:name="android.intent.action.MAIN" />
+64-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:33:17-69
+64-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:33:25-66
+65
+66                <category android:name="android.intent.category.LAUNCHER" />
+66-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:35:17-77
+66-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:35:27-74
+67            </intent-filter>
+68        </activity>
+69
+70        <provider
+70-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:39:9-47:20
+71            android:name="androidx.core.content.FileProvider"
+71-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:40:13-62
+72            android:authorities="com.example.appmovil.fileprovider"
+72-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:41:13-68
+73            android:exported="false"
+73-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:42:13-37
+74            android:grantUriPermissions="true" >
+74-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:43:13-47
+75            <meta-data
+75-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:44:13-46:54
+76                android:name="android.support.FILE_PROVIDER_PATHS"
+76-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:45:17-67
+77                android:resource="@xml/file_paths" />
+77-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:46:17-51
+78        </provider>
+79
+80        <service
+80-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:49:9-53:56
+81            android:name="com.example.appmovil.services.SolicitudPollingService"
+81-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:50:13-61
+82            android:enabled="true"
+82-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:51:13-35
+83            android:exported="false"
+83-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:52:13-37
+84            android:foregroundServiceType="dataSync" />
+84-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:53:13-53
+85        <service
+85-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:55:9-59:56
+86            android:name="com.example.appmovil.services.LocationService"
+86-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:56:13-53
+87            android:enabled="true"
+87-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:57:13-35
+88            android:exported="false"
+88-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:58:13-37
+89            android:foregroundServiceType="location" />
+89-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:59:13-53
+90
+91        <!-- IMPORTANTE: REEMPLAZA EL VALOR DE ABAJO CON TU API KEY REAL DE GOOGLE CLOUD CONSOLE -->
+92        <!-- Sigue estos pasos: 1. Ve a console.cloud.google.com 2. Habilita "Maps SDK for Android" 3. Crea una Credencial (API Key) -->
+93        <meta-data
+93-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:63:9-65:71
+94            android:name="com.google.android.geo.API_KEY"
+94-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:64:13-58
+95            android:value="AIzaSyAtIuw_3zF7r7R5g6pw3FffqQzlQNLRN2c" />
+95-->C:\Users\laptop\AndroidStudioProjects\APPMOVIL\app\src\main\AndroidManifest.xml:65:13-68
+96        <!-- Needs to be explicitly declared on P+ -->
+97        <uses-library
+97-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:39:9-41:40
+98            android:name="org.apache.http.legacy"
+98-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:40:13-50
+99            android:required="false" />
+99-->[com.google.android.gms:play-services-maps:19.0.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\3cde3586ff85eeb90cc14ff8d4d6a9f2\workspace\transformed\play-services-maps-19.0.0\AndroidManifest.xml:41:13-37
+100
+101        <activity
+101-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\be120ab5ccdca86548e87151d454e6e4\workspace\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:9-173
+102            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+102-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\be120ab5ccdca86548e87151d454e6e4\workspace\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:19-85
+103            android:exported="false"
+103-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\be120ab5ccdca86548e87151d454e6e4\workspace\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:146-170
+104            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+104-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\be120ab5ccdca86548e87151d454e6e4\workspace\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:86-145
+105        <activity
+105-->[androidx.compose.ui:ui-tooling-android:1.9.2] C:\Users\laptop\.gradle\caches\9.2.1\transforms\e18a62590877930367137da3ef75539f\workspace\transformed\ui-tooling\AndroidManifest.xml:23:9-25:39
+106            android:name="androidx.compose.ui.tooling.PreviewActivity"
+106-->[androidx.compose.ui:ui-tooling-android:1.9.2] C:\Users\laptop\.gradle\caches\9.2.1\transforms\e18a62590877930367137da3ef75539f\workspace\transformed\ui-tooling\AndroidManifest.xml:24:13-71
+107            android:exported="true" />
+107-->[androidx.compose.ui:ui-tooling-android:1.9.2] C:\Users\laptop\.gradle\caches\9.2.1\transforms\e18a62590877930367137da3ef75539f\workspace\transformed\ui-tooling\AndroidManifest.xml:25:13-36
+108        <activity
+108-->[androidx.compose.ui:ui-test-manifest:1.9.2] C:\Users\laptop\.gradle\caches\9.2.1\transforms\226e2f9301ed69028040b8067a78f510\workspace\transformed\ui-test-manifest-1.9.2\AndroidManifest.xml:23:9-26:79
+109            android:name="androidx.activity.ComponentActivity"
+109-->[androidx.compose.ui:ui-test-manifest:1.9.2] C:\Users\laptop\.gradle\caches\9.2.1\transforms\226e2f9301ed69028040b8067a78f510\workspace\transformed\ui-test-manifest-1.9.2\AndroidManifest.xml:24:13-63
+110            android:exported="true"
+110-->[androidx.compose.ui:ui-test-manifest:1.9.2] C:\Users\laptop\.gradle\caches\9.2.1\transforms\226e2f9301ed69028040b8067a78f510\workspace\transformed\ui-test-manifest-1.9.2\AndroidManifest.xml:25:13-36
+111            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+111-->[androidx.compose.ui:ui-test-manifest:1.9.2] C:\Users\laptop\.gradle\caches\9.2.1\transforms\226e2f9301ed69028040b8067a78f510\workspace\transformed\ui-test-manifest-1.9.2\AndroidManifest.xml:26:13-76
+112
+113        <provider
+113-->[androidx.emoji2:emoji2:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\05e9a23c2b981ce7fe406d2756add0f8\workspace\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
+114            android:name="androidx.startup.InitializationProvider"
+114-->[androidx.emoji2:emoji2:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\05e9a23c2b981ce7fe406d2756add0f8\workspace\transformed\emoji2-1.4.0\AndroidManifest.xml:25:13-67
+115            android:authorities="com.example.appmovil.androidx-startup"
+115-->[androidx.emoji2:emoji2:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\05e9a23c2b981ce7fe406d2756add0f8\workspace\transformed\emoji2-1.4.0\AndroidManifest.xml:26:13-68
+116            android:exported="false" >
+116-->[androidx.emoji2:emoji2:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\05e9a23c2b981ce7fe406d2756add0f8\workspace\transformed\emoji2-1.4.0\AndroidManifest.xml:27:13-37
+117            <meta-data
+117-->[androidx.emoji2:emoji2:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\05e9a23c2b981ce7fe406d2756add0f8\workspace\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
+118                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+118-->[androidx.emoji2:emoji2:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\05e9a23c2b981ce7fe406d2756add0f8\workspace\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
+119                android:value="androidx.startup" />
+119-->[androidx.emoji2:emoji2:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\05e9a23c2b981ce7fe406d2756add0f8\workspace\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
+120            <meta-data
+120-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\09fac1b621425be6af7f5d2db061b7f6\workspace\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:29:13-31:52
+121                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+121-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\09fac1b621425be6af7f5d2db061b7f6\workspace\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:30:17-78
+122                android:value="androidx.startup" />
+122-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\09fac1b621425be6af7f5d2db061b7f6\workspace\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:31:17-49
+123            <meta-data
+123-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
+124                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+124-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
+125                android:value="androidx.startup" />
+125-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
+126        </provider>
+127
+128        <meta-data
+128-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cfb3a3266b23d20f27646fbd4e833d12\workspace\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
+129            android:name="com.google.android.gms.version"
+129-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cfb3a3266b23d20f27646fbd4e833d12\workspace\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
+130            android:value="@integer/google_play_services_version" />
+130-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\cfb3a3266b23d20f27646fbd4e833d12\workspace\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
+131
+132        <receiver
+132-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
+133            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+133-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
+134            android:directBootAware="false"
+134-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
+135            android:enabled="true"
+135-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
+136            android:exported="true"
+136-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
+137            android:permission="android.permission.DUMP" >
+137-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
+138            <intent-filter>
+138-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
+139                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+139-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
+139-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
+140            </intent-filter>
+141            <intent-filter>
+141-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
+142                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+142-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
+142-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
+143            </intent-filter>
+144            <intent-filter>
+144-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
+145                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+145-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
+145-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
+146            </intent-filter>
+147            <intent-filter>
+147-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
+148                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+148-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
+148-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\laptop\.gradle\caches\9.2.1\transforms\81f828d53a48b3f80ede0b97235546ab\workspace\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
+149            </intent-filter>
+150        </receiver>
+151    </application>
+152
+153</manifest>

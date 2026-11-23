@@ -1,0 +1,625 @@
+package com.example.appmovil.ui.home
+
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import com.example.appmovil.data.remote.SolicitudItem
+import com.example.appmovil.data.remote.RetrofitClient
+import com.example.appmovil.ui.theme.*
+import java.time.LocalDateTime
+import java.time.Duration
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+
+/**
+ * Función auxiliar para obtener la URL completa de la imagen.
+ * Si el path es relativo (ej: api/uploads/...), concatena la BASE_URL.
+ */
+fun getImageUrl(path: String?): String? {
+    if (path.isNullOrBlank() || path == "null") return null
+    if (path.contains("tudominio.com")) {
+        return path.replace("https://tudominio.com/", RetrofitClient.BASE_URL)
+                   .replace("http://tudominio.com/", RetrofitClient.BASE_URL)
+    }
+    if (path.startsWith("http")) return path
+    val cleanPath = path.removePrefix("/")
+    return "${RetrofitClient.BASE_URL}$cleanPath"
+}
+
+@Composable
+fun SolicitudItemCard(
+    solicitud: SolicitudItem,
+    isSatelite: Boolean = false,
+    isAdmin: Boolean = false,
+    onStatusUpdate: (Int, String, String?) -> Unit = { _, _, _ -> },
+    onEdit: (SolicitudItem) -> Unit = {},
+    onAssign: (SolicitudItem) -> Unit = {},
+    onTakePhoto: (Int) -> Unit = {},
+    onPickPhoto: (Int) -> Unit = {}
+) {
+    if (isSatelite) {
+        SateliteSolicitudCard(
+            solicitud = solicitud,
+            userRol = "satelite",
+            onStatusUpdate = onStatusUpdate,
+            onTakePhoto = onTakePhoto,
+            onPickPhoto = onPickPhoto
+        )
+    } else {
+        SupervisorSolicitudCard(
+            solicitud = solicitud, 
+            isAdmin = isAdmin,
+            onEdit = onEdit,
+            onAssign = onAssign,
+            onStatusUpdate = onStatusUpdate
+        )
+    }
+}
+
+@Composable
+fun SateliteSolicitudCard(
+    solicitud: SolicitudItem,
+    onStatusUpdate: (Int, String, String?) -> Unit,
+    onTakePhoto: (Int) -> Unit = {},
+    onPickPhoto: (Int) -> Unit = {},
+    userRol: String = "satelite"
+) {
+    val context = LocalContext.current
+    val isSatelite = userRol.trim().lowercase() == "satelite"
+    val estado = solicitud.estado?.lowercase() ?: "pendiente"
+    var selectedImageUrl by remember { mutableStateOf<String?>(null) }
+    var showCorrectionDialog by remember { mutableStateOf(false) }
+    
+    if (showCorrectionDialog) {
+        com.example.appmovil.ui.home.CorrectionDialog(
+            onDismiss = { showCorrectionDialog = false },
+            onConfirm = { comment ->
+                onStatusUpdate(solicitud.id, "corregir", comment)
+                showCorrectionDialog = false
+            }
+        )
+    }
+    
+    if (selectedImageUrl != null) {
+        ImageZoomDialog(imageUrl = selectedImageUrl!!, onDismiss = { selectedImageUrl = null })
+    }
+    
+    val openMap = { platform: String ->
+        val coords = solicitud.coordenadas ?: ""
+        if (coords.isNotBlank()) {
+            val uri = if (platform == "google") "geo:$coords?q=$coords" else "waze://?ll=$coords&navigate=yes"
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
+            } catch (e: Exception) {
+                if (platform == "waze") {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$coords")))
+                }
+            }
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .border(1.dp, LightAzure.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        var now by remember { mutableStateOf(LocalDateTime.now()) }
+        LaunchedEffect(solicitud.id, estado) {
+            if (estado == "pendiente") {
+                while(true) {
+                    kotlinx.coroutines.delay(10000) // 10s ticker
+                    now = LocalDateTime.now()
+                }
+            }
+        }
+        
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header: Folio y Estado
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "SOT: ${solicitud.sot ?: "---"}",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DeepAzure,
+                        letterSpacing = 1.sp
+                    )
+                )
+                
+                StatusBadge(estado)
+            }
+
+            // --- TIEMPOS (NUEVO) ---
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Schedule, null, modifier = Modifier.size(12.dp), tint = TextLight)
+                Spacer(Modifier.width(6.dp))
+                val creationTime = try { 
+                    val dt = LocalDateTime.parse(solicitud.fechaCreacion?.replace(" ", "T") ?: "")
+                    dt.format(DateTimeFormatter.ofPattern("HH:mm"))
+                } catch(e: Exception) { "--:--" }
+                
+                Text("Creado: $creationTime", style = MaterialTheme.typography.labelSmall, color = TextLight)
+                
+                if (estado == "pendiente") {
+                    Spacer(Modifier.width(12.dp))
+                    val waitMin = try {
+                        val start = LocalDateTime.parse(solicitud.fechaCreacion?.replace(" ", "T") ?: "")
+                        ChronoUnit.MINUTES.between(start, now).coerceAtLeast(0)
+                    } catch(e: Exception) { 0 }
+                    Text("Espera: ${waitMin}m", style = MaterialTheme.typography.labelSmall, color = ErrorRed, fontWeight = FontWeight.Bold)
+                }
+                
+                if (estado == "completada" && solicitud.fechaAceptacion != null && solicitud.fechaFinalizacion != null) {
+                    Spacer(Modifier.width(12.dp))
+                    val durationMin = try {
+                        val start = LocalDateTime.parse(solicitud.fechaAceptacion?.replace(" ", "T") ?: "")
+                        val end = LocalDateTime.parse(solicitud.fechaFinalizacion?.replace(" ", "T") ?: "")
+                        ChronoUnit.MINUTES.between(start, end)
+                    } catch(e: Exception) { 0 }
+                    Text("Duración: ${durationMin}m", style = MaterialTheme.typography.labelSmall, color = SuccessGreen, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Cuerpo: Información Técnica
+            Text(
+                text = solicitud.tecnico?.uppercase() ?: "TÉCNICO NO ASIGNADO",
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
+                )
+            )
+            
+            Spacer(Modifier.height(12.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                InfoRowMinimal(Icons.Outlined.Build, solicitud.motivo ?: "Sin motivo")
+                InfoRowMinimal(Icons.Outlined.Inventory2, "Material: ${solicitud.material ?: "Sin material"}")
+                InfoRowMinimal(Icons.Outlined.LocationOn, solicitud.zona ?: "Sin zona")
+                InfoRowMinimal(Icons.Outlined.AssignmentInd, "Supervisor: ${solicitud.nombreSupervisor ?: "---"}")
+            }
+
+            // --- FOTO DE EVIDENCIA ---
+            val imageUrl = getImageUrl(solicitud.fotoEvidencia)
+            val hasPhoto = imageUrl != null
+            
+            if (hasPhoto) {
+                Spacer(Modifier.height(16.dp))
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Evidencia",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(LightAzure)
+                        .clickable { selectedImageUrl = imageUrl },
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Verified, null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Evidencia verificada", color = SuccessGreen, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                }
+            }
+
+            // --- ACCIONES TÉCNICAS (Solo Satélite) ---
+            if (isSatelite && estado != "completada") {
+                Spacer(Modifier.height(20.dp))
+                
+                // Navegación
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MapButtonMinimal("Maps", Icons.Outlined.Map, SoftAzure, { openMap("google") }, Modifier.weight(1f))
+                    MapButtonMinimal("Waze", Icons.Outlined.Navigation, Color(0xFF33CCFF), { openMap("waze") }, Modifier.weight(1f))
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Estados de Flujo
+                when (estado) {
+                    "pendiente", "corregir" -> {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ActionButtonModern("ACEPTAR", SuccessGreen, onClick = { onStatusUpdate(solicitud.id, "aceptada", null) }, modifier = Modifier.weight(1f))
+                            ActionButtonModern("CORREGIR", WarningOrange, onClick = { showCorrectionDialog = true }, modifier = Modifier.weight(1f))
+                            ActionButtonModern("RECHAZAR", ErrorRed, onClick = { onStatusUpdate(solicitud.id, "rechazada", null) }, modifier = Modifier.weight(1f))
+                        }
+                    }
+                    "aceptada" -> {
+                        ActionButtonModern("INICIAR RUTA", SoftAzure, onClick = { onStatusUpdate(solicitud.id, "en_camino", null) }, modifier = Modifier.fillMaxWidth())
+                    }
+                    "en_camino" -> {
+                        ActionButtonModern("MARCAR LLEGADA", WarningOrange, textColor = Color.Black, onClick = { onStatusUpdate(solicitud.id, "llegado", null) }, modifier = Modifier.fillMaxWidth())
+                    }
+                    "llegado" -> {
+                        if (!hasPhoto) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                HeavyButton("CÁMARA", Icons.Default.PhotoCamera, onClick = { onTakePhoto(solicitud.id) }, Modifier.weight(1f))
+                                HeavyButton("GALERÍA", Icons.Default.Collections, onClick = { onPickPhoto(solicitud.id) }, Modifier.weight(1f))
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        ActionButtonModern("FINALIZAR APOYO", if (hasPhoto) SuccessGreen else TextLight, onClick = { if (hasPhoto) onStatusUpdate(solicitud.id, "completada", null) }, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SupervisorSolicitudCard(
+    solicitud: SolicitudItem,
+    isAdmin: Boolean = false,
+    onEdit: (SolicitudItem) -> Unit,
+    onAssign: (SolicitudItem) -> Unit = {},
+    onStatusUpdate: (Int, String, String?) -> Unit = { _, _, _ -> }
+) {
+    val estado = solicitud.estado?.lowercase() ?: "pendiente"
+    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    LaunchedEffect(solicitud.id, estado) {
+        if (estado == "pendiente") {
+            while(true) {
+                kotlinx.coroutines.delay(10000) // 10s ticker
+                now = LocalDateTime.now()
+            }
+        }
+    }
+    
+    var selectedImageUrl by remember { mutableStateOf<String?>(null) }
+    var showAnnulDialog by remember { mutableStateOf(false) }
+
+    if (selectedImageUrl != null) {
+        ImageZoomDialog(imageUrl = selectedImageUrl!!, onDismiss = { selectedImageUrl = null })
+    }
+
+    if (showAnnulDialog) {
+        AlertDialog(
+            onDismissRequest = { showAnnulDialog = false },
+            title = { Text("¿Anular Orden?") },
+            text = { Text("Esta acción dará de baja la orden SOT #${solicitud.sot} y no podrá ser tomada por ningún satélite.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { 
+                        onStatusUpdate(solicitud.id, "anulada", null)
+                        showAnnulDialog = false 
+                    }
+                ) {
+                    Text("SÍ, ANULAR", color = ErrorRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAnnulDialog = false }) {
+                    Text("CANCELAR", color = TextLight)
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = Color.White
+        )
+    }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .border(1.dp, LightAzure.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Text("ORDEN #${solicitud.sot}", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black, color = DeepAzure))
+                StatusBadge(estado)
+            }
+
+            // --- TIEMPOS (ADMIN/SUP) ---
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                val creationTime = try { 
+                    LocalDateTime.parse(solicitud.fechaCreacion?.replace(" ", "T") ?: "").format(DateTimeFormatter.ofPattern("HH:mm"))
+                } catch(e: Exception) { "--:--" }
+                
+                Text("📩 $creationTime", style = MaterialTheme.typography.labelSmall, color = TextLight)
+                
+                if (estado == "pendiente") {
+                    val waitMin = try {
+                        val start = LocalDateTime.parse(solicitud.fechaCreacion?.replace(" ", "T") ?: "")
+                        ChronoUnit.MINUTES.between(start, now).coerceAtLeast(0)
+                    } catch(e: Exception) { 0 }
+                    Spacer(Modifier.width(8.dp))
+                    Text("⏳ Espera: ${waitMin}m", style = MaterialTheme.typography.labelSmall, color = ErrorRed, fontWeight = FontWeight.Bold)
+                }
+                
+                if (solicitud.fechaAceptacion != null && solicitud.fechaFinalizacion != null) {
+                    val durationMin = try {
+                        val start = LocalDateTime.parse(solicitud.fechaAceptacion?.replace(" ", "T") ?: "")
+                        val end = LocalDateTime.parse(solicitud.fechaFinalizacion?.replace(" ", "T") ?: "")
+                        ChronoUnit.MINUTES.between(start, end)
+                    } catch(e: Exception) { 0 }
+                    Spacer(Modifier.width(8.dp))
+                    Text("✅ Duró: ${durationMin}m", style = MaterialTheme.typography.labelSmall, color = SuccessGreen, fontWeight = FontWeight.Bold)
+                }
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            
+            Text(solicitud.tecnico ?: "---", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextDark)
+            
+            // --- CREADO POR (Supervisor) ---
+            if (!solicitud.nombreSupervisor.isNullOrBlank()) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    Icon(Icons.Outlined.AssignmentInd, null, Modifier.size(14.dp), tint = TextLight.copy(0.7f))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Supervisor: ${solicitud.nombreSupervisor}", style = MaterialTheme.typography.labelSmall, color = TextLight.copy(0.7f))
+                }
+            }
+            
+            val imageUrl = getImageUrl(solicitud.fotoEvidencia)
+            val hasPhoto = imageUrl != null
+            
+            if (hasPhoto) {
+                Spacer(Modifier.height(12.dp))
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SoftWhite)
+                        .clickable { selectedImageUrl = imageUrl },
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            // --- COMENTARIO DEL SATÉLITE (Si existe) ---
+            if (!solicitud.comentarioSatelite.isNullOrBlank()) {
+                Spacer(Modifier.height(16.dp))
+                androidx.compose.material3.Surface(
+                    color = WarningOrange.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, WarningOrange.copy(alpha = 0.5f))
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Feedback, null, Modifier.size(16.dp), tint = WarningOrange)
+                            Spacer(Modifier.width(8.dp))
+                            Text("OBSERVACIÓN DEL SATÉLITE:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black, color = WarningOrange)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(solicitud.comentarioSatelite, style = MaterialTheme.typography.bodySmall, color = TextDark)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            
+            if (solicitud.idSatelite != null && solicitud.idSatelite != 0) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.PersonSearch, null, Modifier.size(16.dp), tint = SoftAzure)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Asignado: ${solicitud.nombreSatelite}", style = MaterialTheme.typography.bodySmall, color = SoftAzure, fontWeight = FontWeight.Bold)
+                }
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Zona: ${solicitud.zona}", style = MaterialTheme.typography.bodySmall, color = TextLight)
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (estado == "pendiente") {
+                        Text(
+                            "ANULAR", 
+                            Modifier.clickable { showAnnulDialog = true }, 
+                            color = ErrorRed.copy(alpha = 0.7f), 
+                            fontWeight = FontWeight.Bold, 
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    
+                    if (estado == "corregir" || estado == "pendiente") {
+                        Text(
+                            "EDITAR", 
+                            Modifier.clickable { onEdit(solicitud) }, 
+                            color = SoftAzure, 
+                            fontWeight = FontWeight.ExtraBold, 
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+
+                    if (isAdmin && estado !in listOf("completada", "rechazada", "anulada")) {
+                        Text(
+                            if (solicitud.idSatelite != null && solicitud.idSatelite != 0) "REASIGNAR" else "ASIGNAR",
+                            Modifier.clickable { onAssign(solicitud) },
+                            color = WarningOrange,
+                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// --- SUB-COMPONENTES DE DISEÑO EMPRESARIAL ---
+
+@Composable
+fun StatusBadge(estado: String) {
+    val color = when(estado) {
+        "completada" -> SuccessGreen
+        "en_camino", "llegado" -> WarningOrange
+        "aceptada" -> SoftAzure
+        "rechazada" -> ErrorRed
+        else -> TextLight
+    }
+    
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = estado.uppercase(),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, color = color, fontSize = 9.sp)
+        )
+    }
+}
+
+@Composable
+fun InfoRowMinimal(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, Modifier.size(16.dp), tint = TextLight)
+        Spacer(Modifier.width(10.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = TextLight)
+    }
+}
+
+@Composable
+fun ActionButtonModern(text: String, color: Color, textColor: Color = Color.White, onClick: () -> Unit, modifier: Modifier) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = color),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(text, fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 0.sp, color = textColor)
+    }
+}
+
+@Composable
+fun MapButtonMinimal(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, onClick: () -> Unit, modifier: Modifier) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.3f))
+    ) {
+        Icon(icon, null, Modifier.size(18.dp), tint = color)
+        Spacer(Modifier.width(8.dp))
+        Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+    }
+}
+
+@Composable
+fun HeavyButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, modifier: Modifier) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF475569)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Icon(icon, null, Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun ImageZoomDialog(imageUrl: String, onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.9f))
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Zoom Evidencia",
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .fillMaxHeight(0.8f)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Fit
+            )
+            
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
+            }
+        }
+    }
+}
+@Composable
+fun CorrectionDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var comment by remember { mutableStateOf("") }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Surface(shape = RoundedCornerShape(24.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Column(Modifier.padding(24.dp)) {
+                Text("Motivo de Corrección", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = com.example.appmovil.ui.theme.DeepAzure)
+                Spacer(Modifier.height(8.dp))
+                Text("Explica brevemente por qué envías esta solicitud a corregir.", style = MaterialTheme.typography.bodyMedium, color = com.example.appmovil.ui.theme.TextLight)
+                Spacer(Modifier.height(16.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    placeholder = { Text("Ej: SOT incorrecta, falta material...") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = com.example.appmovil.ui.theme.WarningOrange,
+                        unfocusedBorderColor = com.example.appmovil.ui.theme.LightAzure
+                    )
+                )
+                Spacer(Modifier.height(24.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    androidx.compose.material3.OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) { Text("CANCELAR") }
+                    androidx.compose.material3.Button(
+                        onClick = { if(comment.isNotBlank()) onConfirm(comment) }, 
+                        modifier = Modifier.weight(1f), 
+                        shape = RoundedCornerShape(12.dp), 
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = com.example.appmovil.ui.theme.WarningOrange),
+                        enabled = comment.isNotBlank()
+                    ) { Text("ENVIAR", color = Color.Black) }
+                }
+            }
+        }
+    }
+}

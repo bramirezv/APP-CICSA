@@ -1,0 +1,33 @@
+package com.example.appmovil.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// Paleta Empresarial - Midnight & Slate
+val DeepAzure = Color(0xFF0F172A) // Midnight Blue (Texto y Títulos)
+val SoftAzure = Color(0xFF2563EB) // Professional Blue (Acciones/Primario)
+val LightAzure = Color(0xFFE2E8F0) // Slate Gray Light (Bordes y Fondos)
+
+val SoftWhite = Color(0xFFF8FAFC) // Background (Color Papel)
+val SoftGray = Color(0xFF94A3B8)  // Gray Neutro (Placeholders)
+val TextDark = Color(0xFF1E293B)  // Text Primary
+val TextLight = Color(0xFF64748B) // Text Secondary
+
+val ErrorRed = Color(0xFFEF4444)  // Alert Red
+val SuccessGreen = Color(0xFF10B981) // Emerald Green (Success)
+val WarningOrange = Color(0xFFF59E0B) // Amber (Warning)
+
+// Material 3 defaults for reference
+val PrimaryLight = SoftAzure
+val OnPrimaryLight = Color.White
+val PrimaryContainerLight = Color(0xFFDBEAFE)
+val OnPrimaryContainerLight = SoftAzure
+
+val SecondaryLight = Color(0xFF64748B)
+val OnSecondaryLight = Color.White
+val SecondaryContainerLight = Color(0xFFF1F5F9)
+val OnSecondaryContainerLight = Color(0xFF1E293B)
+
+val BackgroundLight = SoftWhite
+val OnBackgroundLight = TextDark
+val SurfaceLight = Color.White
+val OnSurfaceLight = TextDark

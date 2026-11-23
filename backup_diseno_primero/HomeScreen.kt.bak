@@ -1,0 +1,860 @@
+package com.example.appmovil.ui.home
+
+import android.media.RingtoneManager
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import com.example.appmovil.ui.theme.*
+import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+import java.io.File
+import androidx.core.content.FileProvider
+import androidx.compose.ui.window.Dialog
+import android.os.Build
+import android.content.Intent
+import android.Manifest
+import com.example.appmovil.services.SolicitudPollingService
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    userId: Int,
+    userName: String,
+    userRol: String = "usuario",
+    userZona: String = "SIN ZONA",
+    onLogout: () -> Unit,
+    onRegisterUser: () -> Unit,
+    onCreateSolicitud: () -> Unit,
+    onEditSolicitud: (com.example.appmovil.data.remote.SolicitudItem) -> Unit = {},
+    solicitudViewModel: com.example.appmovil.ui.solicitudes.SolicitudViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    chatViewModel: com.example.appmovil.ui.chat.ChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return com.example.appmovil.ui.chat.ChatViewModel(com.example.appmovil.data.repository.AuthRepository(com.example.appmovil.data.remote.RetrofitClient.authApi)) as T
+            }
+        }
+    )
+) {
+    val cleanRol = userRol.trim().lowercase()
+    val isAdmin = cleanRol.contains("admin")
+    val isSupervisor = cleanRol.contains("supervisor")
+    val isSatelite = !isAdmin && !isSupervisor 
+    
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val solicitudState by solicitudViewModel.uiState.collectAsState()
+    
+    var currentSection by remember { mutableStateOf("inicio") }
+    var selectedFilter by remember { mutableStateOf("TODAS") }
+    var previousSolicitudes by remember { mutableStateOf<List<com.example.appmovil.data.remote.SolicitudItem>>(emptyList()) }
+    var previousPendingCount by remember { mutableIntStateOf(0) }
+    var pendingPhotoId by remember { mutableStateOf<Int?>(null) }
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
+
+    val satelliteStatuses by solicitudViewModel.satelliteStatuses.collectAsState()
+    val myStatus by solicitudViewModel.myStatus.collectAsState()
+    var statusMenuExpanded by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val zoningState by solicitudViewModel.zoningState.collectAsState()
+
+    // Estados para Zonificación (Admin)
+    var showZoningDialog by remember { mutableStateOf(false) }
+    var selectedSatForZoning by remember { mutableStateOf<com.example.appmovil.data.remote.SatelliteStatusItem?>(null) }
+
+    // --- NUEVO: ASIGNACION MANUAL ---
+    var showAssignDialog by remember { mutableStateOf(false) }
+    var selectedSolicitudForAssign by remember { mutableStateOf<com.example.appmovil.data.remote.SolicitudItem?>(null) }
+
+    // 0. Gestión de Notificaciones de Sistema y Servicio de Fondo
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    // Iniciar Servicio de Fondo para Vigilancia de Tareas y Chat (Todos los roles activos)
+    LaunchedEffect(userId) {
+        if (userId != 0 && (isSatelite || isSupervisor || isAdmin)) {
+            val serviceIntent = Intent(context, SolicitudPollingService::class.java).apply {
+                putExtra("user_id", userId)
+                putExtra("user_rol", cleanRol)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+        }
+    }
+
+    // 1. Polling de datos Maestro (Chat y Tareas)
+    LaunchedEffect(userId) {
+        if (userId != 0) {
+            while(true) {
+                try {
+                    solicitudViewModel.fetchSolicitudes(
+                        userId = if(isSatelite) userId else null,
+                        zona = if(isSatelite) userZona else if(isAdmin) "ADMIN" else null,
+                        supervisor = if(isSupervisor) userName else null
+                    )
+                    if (isSupervisor || isAdmin) {
+                        solicitudViewModel.fetchSatelliteStatuses()
+                    }
+                    if (isSatelite) {
+                        solicitudViewModel.fetchUserInfo(userId)
+                    }
+                    // Refrescar contactos y UNREAD COUNT de forma constante cada 5s
+                    chatViewModel.fetchContacts(userId, cleanRol)
+                } catch (e: Exception) { e.printStackTrace() }
+                
+                kotlinx.coroutines.delay(5000) 
+            }
+        }
+    }
+
+    // 2. Sistema de Notificaciones Inteligente
+    LaunchedEffect(solicitudState) {
+        if (solicitudState is com.example.appmovil.ui.solicitudes.SolicitudUiState.Success) {
+            val currentList = (solicitudState as com.example.appmovil.ui.solicitudes.SolicitudUiState.Success).solicitudes
+            val currentPendingIds = currentList.filter { it.estado?.lowercase() == "pendiente" }.map { it.id }.toSet()
+            val previousPendingIds = previousSolicitudes.filter { it.estado?.lowercase() == "pendiente" }.map { it.id }.toSet()
+
+            // Solo disparar si detectamos IDs nuevos que no estaban en la carga anterior
+            val newIds = currentPendingIds - previousPendingIds
+            
+            if (newIds.isNotEmpty() && isSatelite && previousSolicitudes.isNotEmpty()) {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "¡Nueva solicitud pendiente de atención!",
+                        duration = SnackbarDuration.Long
+                    )
+                }
+                try {
+                    val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    val r = RingtoneManager.getRingtone(context, notification)
+                    r.play()
+                } catch (e: Exception) { e.printStackTrace() }
+            }
+            previousPendingCount = currentPendingIds.size
+            previousSolicitudes = currentList
+        }
+    }
+
+    // 3. Captura de Foto
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            val uri = photoUri ?: return@rememberLauncherForActivityResult
+            val id = pendingPhotoId ?: return@rememberLauncherForActivityResult
+            try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    solicitudViewModel.uploadEvidencia(id, stream.readBytes())
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+    
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            val id = pendingPhotoId ?: return@let
+            try {
+                context.contentResolver.openInputStream(it)?.use { stream ->
+                    solicitudViewModel.uploadEvidencia(id, stream.readBytes())
+                }
+            } catch (e: Exception) { }
+        }
+    }
+
+    val contacts by chatViewModel.contacts.collectAsState()
+    val totalUnread by remember { 
+        derivedStateOf { contacts.sumOf { it.unreadCount } } 
+    }
+
+    // 4. Notificaciones de Chat (Sonido en primer plano)
+    // 4. Notificaciones de Chat (Sonido en primer plano)
+    LaunchedEffect(Unit) {
+        chatViewModel.incomingMessageEvent.collect {
+            try {
+                val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                val r = RingtoneManager.getRingtone(context, notification)
+                r.play()
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    // 5. Monitoreo de resultado de Zonificación
+    LaunchedEffect(zoningState) {
+        if (zoningState is com.example.appmovil.ui.solicitudes.CreateSolicitudUiState.Success) {
+            snackbarHostState.showSnackbar((zoningState as com.example.appmovil.ui.solicitudes.CreateSolicitudUiState.Success).message)
+            solicitudViewModel.resetZoningState()
+        } else if (zoningState is com.example.appmovil.ui.solicitudes.CreateSolicitudUiState.Error) {
+            snackbarHostState.showSnackbar("Error: ${(zoningState as com.example.appmovil.ui.solicitudes.CreateSolicitudUiState.Error).message}")
+            solicitudViewModel.resetZoningState()
+        }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = Color.White,
+                modifier = Modifier.width(300.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    // Header Drawer
+                Box(modifier = Modifier.fillMaxWidth().background(brush = Brush.verticalGradient(colors = listOf(DeepAzure, Color(0xFF1E293B)))).padding(24.dp)) {
+                    Column {
+                        Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.White.copy(0.2f)), contentAlignment = Alignment.Center) {
+                            Text(userName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Text(userName, color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(userRol.uppercase(), color = Color.White.copy(0.7f), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                
+                Spacer(Modifier.height(12.dp))
+                
+                // Items Comunes
+                NavigationDrawerItem(
+                    label = { Text("Panel de Control") },
+                    selected = currentSection == "inicio",
+                    onClick = { currentSection = "inicio"; scope.launch { drawerState.close() } },
+                    icon = { Icon(Icons.Outlined.Dashboard, null) },
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Historial") },
+                    selected = currentSection == "historial",
+                    onClick = { currentSection = "historial"; scope.launch { drawerState.close() } },
+                    icon = { Icon(Icons.Outlined.History, null) },
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+
+                if (isSupervisor || isAdmin) {
+                    Divider(Modifier.padding(horizontal = 24.dp, vertical = 12.dp), color = LightAzure.copy(alpha = 0.5f))
+                    Text("OPERACIONES", modifier = Modifier.padding(24.dp, 8.dp), style = MaterialTheme.typography.labelSmall, color = TextLight)
+                    
+                    NavigationDrawerItem(
+                        label = { Text("Monitoreo Satélites", fontWeight = FontWeight.Bold) },
+                        selected = currentSection == "monitoreo",
+                        onClick = { 
+                            currentSection = "monitoreo"
+                            solicitudViewModel.fetchSatelliteStatuses()
+                            scope.launch { drawerState.close() } 
+                        },
+                        icon = { Icon(Icons.Outlined.Dvr, null) },
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
+
+                if (isAdmin) {
+                    Divider(Modifier.padding(horizontal = 24.dp, vertical = 12.dp), color = LightAzure.copy(alpha = 0.5f))
+                    Text("GESTIÓN ADMINISTRATIVA", modifier = Modifier.padding(24.dp, 8.dp), style = MaterialTheme.typography.labelSmall, color = TextLight)
+
+                    NavigationDrawerItem(
+                        label = { Text("Zonificar Satélites", fontWeight = FontWeight.Bold) },
+                        selected = currentSection == "zonificacion",
+                        onClick = { 
+                            currentSection = "zonificacion"
+                            solicitudViewModel.fetchSatelliteStatuses()
+                            scope.launch { drawerState.close() } 
+                        },
+                        icon = { Icon(Icons.Outlined.LocationOn, null) },
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text("Gestión de Solicitudes", fontWeight = FontWeight.Bold) },
+                        selected = currentSection == "gestion_solicitudes",
+                        onClick = { 
+                            currentSection = "gestion_solicitudes"
+                            scope.launch { drawerState.close() } 
+                        },
+                        icon = { Icon(Icons.Outlined.Assignment, null) },
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                    
+                    NavigationDrawerItem(
+                        label = { Text("Registrar Usuario", fontWeight = FontWeight.Bold) },
+                        selected = false,
+                        onClick = { 
+                            scope.launch { drawerState.close() }
+                            onRegisterUser() 
+                        },
+                        icon = { Icon(Icons.Outlined.PersonAdd, null) },
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
+
+                NavigationDrawerItem(
+                    label = { 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Chat del Equipo", fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    selected = currentSection == "chat",
+                    onClick = { 
+                        currentSection = "chat"
+                        chatViewModel.fetchContacts(userId, cleanRol)
+                        scope.launch { drawerState.close() } 
+                    },
+                    icon = { Icon(Icons.Outlined.Chat, null) },
+                    badge = {
+                        if (totalUnread > 0) {
+                            Badge(containerColor = ErrorRed) {
+                                Text(totalUnread.toString(), color = Color.White)
+                            }
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+
+                Spacer(Modifier.height(24.dp))
+                
+                NavigationDrawerItem(
+                    label = { Text("Cerrar Sesión") },
+                    selected = false,
+                    onClick = { 
+                        scope.launch { 
+                            drawerState.close() 
+                            // Detenemos el servicio de fondo al salir
+                            context.stopService(Intent(context, SolicitudPollingService::class.java))
+                            onLogout() 
+                        } 
+                    },
+                    icon = { Icon(Icons.Outlined.Logout, null, tint = ErrorRed) },
+                    modifier = Modifier.padding(12.dp),
+                    colors = NavigationDrawerItemDefaults.colors(unselectedTextColor = ErrorRed)
+                )
+                
+                Spacer(Modifier.height(24.dp))
+                }
+            }
+        }
+    ) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = if (totalUnread > 0) "CI-GESTIÓN ($totalUnread)" else "CI-GESTIÓN",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (totalUnread > 0) ErrorRed else DeepAzure
+                                )
+                            )
+                            Text("ID:$userId | ${cleanRol.uppercase()}", style = MaterialTheme.typography.labelSmall, color = TextLight.copy(0.7f))
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            BadgedBox(
+                                badge = {
+                                    if (totalUnread > 0) {
+                                        Badge(containerColor = ErrorRed, modifier = Modifier.size(18.dp)) {
+                                            Text(totalUnread.toString(), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Menu, null)
+                            }
+                        }
+                    },
+                    actions = {
+                        if (isSatelite) {
+                            Box {
+                                TextButton(onClick = { statusMenuExpanded = true }) {
+                                    Icon(Icons.Default.Circle, null, Modifier.size(10.dp), tint = if(myStatus=="Disponible") SuccessGreen else ErrorRed)
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(myStatus.uppercase(), fontWeight = FontWeight.Bold)
+                                }
+                                DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
+                                    DropdownMenuItem(text = { Text("🟢 Disponible") }, onClick = { solicitudViewModel.updateMyStatus(userId, "Disponible"); statusMenuExpanded = false })
+                                    DropdownMenuItem(text = { Text("🔴 Ocupado") }, onClick = { solicitudViewModel.updateMyStatus(userId, "Ocupado"); statusMenuExpanded = false })
+                                    DropdownMenuItem(text = { Text("🟡 Almorzando") }, onClick = { solicitudViewModel.updateMyStatus(userId, "Almorzando"); statusMenuExpanded = false })
+                                }
+                            }
+                            if (isSatelite) {
+                                val currentDynamicZone by solicitudViewModel.currentUserZone.collectAsState()
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "DISTRITO: $currentDynamicZone",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = DeepAzure,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        IconButton(onClick = { 
+                            solicitudViewModel.fetchSolicitudes(
+                                userId = if(isSatelite) userId else null,
+                                zona = if(isSatelite) userZona else if(isAdmin) "ADMIN" else null,
+                                supervisor = if(isSupervisor) userName else null
+                            ) 
+                        }) { Icon(Icons.Outlined.Refresh, null) }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
+                )
+            },
+            floatingActionButton = {
+                if ((isSupervisor || isAdmin) && currentSection == "inicio") {
+                    ExtendedFloatingActionButton(onClick = onCreateSolicitud, containerColor = SoftAzure, contentColor = Color.White) {
+                        Icon(Icons.Default.Add, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("CREAR")
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Box(Modifier.fillMaxSize().padding(innerPadding).background(SoftWhite)) {
+                Column(Modifier.fillMaxSize()) {
+                    if (currentSection == "chat") {
+                        ChatScreen(chatViewModel, userId, cleanRol)
+                    } else if (currentSection == "monitoreo") {
+                        com.example.appmovil.ui.home.SatelliteMonitorView(
+                            satellites = satelliteStatuses,
+                            isAdmin = false // Solo lectura en Monitoreo
+                        )
+                    } else if (currentSection == "zonificacion") {
+                        com.example.appmovil.ui.home.SatelliteMonitorView(
+                            satellites = satelliteStatuses,
+                            isAdmin = true, // Modo edición en Zonificación
+                            onZoneClick = { sat ->
+                                selectedSatForZoning = sat
+                                showZoningDialog = true
+                            }
+                        )
+                    } else if (currentSection == "gestion_solicitudes") {
+                        // Sección de Gestión Total de Solicitudes (Filtros Maestro)
+                        when (val state = solicitudState) {
+                            is com.example.appmovil.ui.solicitudes.SolicitudUiState.Loading -> {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = SoftAzure)
+                                }
+                            }
+                            is com.example.appmovil.ui.solicitudes.SolicitudUiState.Success -> {
+                                // En Gestión de solicitudes, Admin puede filtrar por TODO
+                                SummaryStatsBar(solicitudes = state.solicitudes, selectedFilter = selectedFilter, onFilterSelect = { selectedFilter = it })
+                                
+                                val fullList = state.solicitudes.filter { 
+                                    when (selectedFilter) {
+                                        "PENDIENTES" -> it.estado?.lowercase() == "pendiente"
+                                        "CORREGIR" -> it.estado?.lowercase() == "corregir"
+                                        "EN CURSO" -> it.estado?.lowercase() in listOf("aceptada", "camino", "llegado")
+                                        "LISTAS" -> it.estado?.lowercase() == "completada"
+                                        "RECHAZO" -> it.estado?.lowercase() == "rechazada"
+                                        "ANULADAS" -> it.estado?.lowercase() == "anulada"
+                                        else -> true
+                                    }
+                                }
+
+                                if (fullList.isEmpty()) {
+                                    EmptyStateView("gestion")
+                                } else {
+                                    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)) {
+                                        items(fullList) { sol ->
+                                            com.example.appmovil.ui.home.SolicitudItemCard(
+                                                solicitud = sol,
+                                                isSatelite = false,
+                                                isAdmin = true,
+                                                onStatusUpdate = { id, nue, com -> solicitudViewModel.actualizarEstado(id, nue, null, com) },
+                                                onEdit = { onEditSolicitud(it) },
+                                                onAssign = {
+                                                    selectedSolicitudForAssign = it
+                                                    showAssignDialog = true
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            else -> {}
+                        }
+                    } else {
+                        when (val state = solicitudState) {
+                             is com.example.appmovil.ui.solicitudes.SolicitudUiState.Loading -> {
+                                 // Si es la carga inicial (lista vacía), mostramos el spinner
+                                 // Si es un refresco (ya hay datos), no mostramos nada para evitar parpadeo
+                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                     CircularProgressIndicator(color = SoftAzure)
+                                 }
+                             }
+                             is com.example.appmovil.ui.solicitudes.SolicitudUiState.Success -> {
+                                val baseList = state.solicitudes.filter { 
+                                    if (currentSection == "inicio") it.estado?.lowercase() !in listOf("completada", "rechazada", "anulada")
+                                    else it.estado?.lowercase() in listOf("completada", "rechazada", "anulada")
+                                }
+
+                                if ((isSupervisor || isAdmin) && currentSection == "inicio") {
+                                    SummaryStatsBar(solicitudes = state.solicitudes, selectedFilter = selectedFilter, onFilterSelect = { selectedFilter = it })
+                                }
+
+                                val filteredList = baseList.filter { it ->
+                                    if (isSatelite) {
+                                        val hasActive = baseList.any { 
+                                            it.idSatelite == userId && it.estado?.lowercase() in listOf("aceptada", "camino", "llegado", "corregir") 
+                                        }
+                                        if (hasActive) {
+                                            it.idSatelite == userId && it.estado?.lowercase() in listOf("aceptada", "camino", "llegado", "corregir")
+                                        } else {
+                                            (it.idSatelite ?: 0) == userId || ((it.idSatelite ?: 0) == 0 && it.estado?.lowercase() == "pendiente")
+                                        }
+                                    } else {
+                                        when (selectedFilter) {
+                                            "PENDIENTES" -> it.estado?.lowercase() == "pendiente"
+                                            "CORREGIR" -> it.estado?.lowercase() == "corregir"
+                                            "EN CURSO" -> it.estado?.lowercase() in listOf("aceptada", "camino", "llegado")
+                                            "LISTAS" -> it.estado?.lowercase() == "completada"
+                                            "RECHAZO" -> it.estado?.lowercase() == "rechazada"
+                                            "ANULADAS" -> it.estado?.lowercase() == "anulada"
+                                            else -> true
+                                        }
+                                    }
+                                }
+
+                                if (filteredList.isEmpty()) {
+                                    EmptyStateView(currentSection)
+                                } else {
+                                    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)) {
+                                        items(filteredList) { sol ->
+                                            com.example.appmovil.ui.home.SolicitudItemCard(
+                                                solicitud = sol,
+                                                isSatelite = isSatelite,
+                                                isAdmin = isAdmin,
+                                                onStatusUpdate = { id, nue, com -> 
+                                                    solicitudViewModel.actualizarEstado(id, nue, if(isSatelite) userId else null, com)
+                                                    if (nue == "aceptada") solicitudViewModel.updateMyStatus(userId, "Ocupado")
+                                                    if (nue in listOf("completada", "rechazada")) solicitudViewModel.updateMyStatus(userId, "Disponible")
+                                                },
+                                                onEdit = { onEditSolicitud(it) },
+                                                onAssign = {
+                                                    selectedSolicitudForAssign = it
+                                                    showAssignDialog = true
+                                                },
+                                                onTakePhoto = { id -> 
+                                                    pendingPhotoId = id
+                                                    val file = File(context.cacheDir, "images").apply { mkdirs() }.let { File(it, "img_${System.currentTimeMillis()}.jpg") }
+                                                    photoUri = FileProvider.getUriForFile(context, "com.example.appmovil.fileprovider", file)
+                                                    cameraLauncher.launch(photoUri!!)
+                                                },
+                                                onPickPhoto = { id -> pendingPhotoId = id; galleryLauncher.launch("image/*") }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            is com.example.appmovil.ui.solicitudes.SolicitudUiState.Error -> {
+                                ErrorView(state.message)
+                            }
+                            else -> { /* Idle */ }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- DIÁLOGOS DE ADMINISTRACIÓN ---
+        if (showZoningDialog && selectedSatForZoning != null) {
+            val dynamicZones by solicitudViewModel.availableZones.collectAsState()
+            com.example.appmovil.ui.home.ZonificacionDialog(
+                satelliteName = selectedSatForZoning!!.nombre,
+                currentZone = selectedSatForZoning!!.zona ?: "SIN ZONA",
+                availableZones = dynamicZones,
+                onDismiss = { showZoningDialog = false },
+                onConfirm = { nuevaZona ->
+                    solicitudViewModel.updateUserZone(selectedSatForZoning!!.id, nuevaZona)
+                    showZoningDialog = false
+                    // El Snackbar ahora se dispara desde el LaunchedEffect(zoningState) con el resultado REAL del servidor
+                }
+            )
+        }
+
+        if (showAssignDialog && selectedSolicitudForAssign != null) {
+            val sList = when (val s = satelliteStatuses) {
+                else -> s // es un List<SatelliteStatusItem> directamente en el ViewModel actual
+            }
+            AssignSatelliteDialog(
+                solicitudId = selectedSolicitudForAssign!!.id,
+                sot = selectedSolicitudForAssign!!.sot ?: "---",
+                satellites = sList,
+                onDismiss = { showAssignDialog = false },
+                onConfirm = { satelliteId ->
+                    solicitudViewModel.actualizarEstado(selectedSolicitudForAssign!!.id, "aceptada", satelliteId)
+                    showAssignDialog = false
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun SatelliteMonitorView(
+    satellites: List<com.example.appmovil.data.remote.SatelliteStatusItem>,
+    isAdmin: Boolean = false,
+    onZoneClick: (com.example.appmovil.data.remote.SatelliteStatusItem) -> Unit = {}
+) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)) {
+        items(satellites) { sat ->
+            val color = when(sat.estado) { "Disponible" -> SuccessGreen; "Ocupado" -> ErrorRed; else -> WarningOrange }
+            val hasZone = !sat.zona.isNullOrEmpty() && sat.zona != "SIN ZONA"
+            
+            Surface(
+                modifier = Modifier.fillMaxWidth().let { 
+                    if(isAdmin) it.clickable { onZoneClick(sat) } else it 
+                },
+                shape = RoundedCornerShape(12.dp), 
+                color = Color.White, 
+                border = BorderStroke(1.dp, if(isAdmin && !hasZone) ErrorRed.copy(0.5f) else LightAzure.copy(0.3f))
+            ) {
+                Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(color.copy(0.1f)), contentAlignment = Alignment.Center) {
+                        Text(sat.nombre.take(1).uppercase(), color = color, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(sat.nombre, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(sat.estado ?: "Desconocido", color = color, style = MaterialTheme.typography.labelSmall)
+                            Spacer(Modifier.width(8.dp))
+                            Text("•", color = TextLight.copy(0.5f))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if(hasZone) sat.zona!! else "ASIGNAR ZONA", 
+                                color = if(hasZone) DeepAzure else ErrorRed, 
+                                style = MaterialTheme.typography.labelSmall, 
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    if (isAdmin) {
+                        Icon(Icons.Default.LocationOn, contentDescription = "Zonificar", tint = if(hasZone) SoftAzure else ErrorRed)
+                    } else {
+                        Text(sat.ultimaConexion?.substringAfter(" ") ?: "", style = MaterialTheme.typography.labelSmall, color = TextLight)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SummaryStatsBar(solicitudes: List<com.example.appmovil.data.remote.SolicitudItem>, selectedFilter: String, onFilterSelect: (String) -> Unit) {
+    val stats = listOf(
+        Triple("TODAS", solicitudes.size, SoftAzure),
+        Triple("PENDIENTES", solicitudes.count { it.estado?.lowercase() == "pendiente" }, SoftGray),
+        Triple("CORREGIR", solicitudes.count { it.estado?.lowercase() == "corregir" }, WarningOrange),
+        Triple("EN CURSO", solicitudes.count { it.estado?.lowercase() in listOf("aceptada", "camino", "llegado") }, SuccessGreen),
+        Triple("LISTAS", solicitudes.count { it.estado?.lowercase() == "completada" }, DeepAzure),
+        Triple("ANULADAS", solicitudes.count { it.estado?.lowercase() == "anulada" }, Color.DarkGray)
+    )
+    LazyRow(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 16.dp)) {
+        items(stats) { (label, count, color) ->
+            val isSelected = selectedFilter == label
+            Surface(
+                modifier = Modifier.width(110.dp).clickable { onFilterSelect(label) },
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White,
+                border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) color else LightAzure.copy(0.3f))
+            ) {
+                Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(count.toString(), style = MaterialTheme.typography.titleLarge, color = color, fontWeight = FontWeight.Bold)
+                    Text(label, style = MaterialTheme.typography.labelSmall, color = TextLight)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChatScreen(viewModel: com.example.appmovil.ui.chat.ChatViewModel, miId: Int, miRol: String) {
+    val contacts by viewModel.contacts.collectAsState()
+    val selectedContact by viewModel.selectedContact.collectAsState()
+    val messages by viewModel.messages.collectAsState()
+
+    if (selectedContact == null) {
+        Column(Modifier.fillMaxSize().padding(16.dp)) {
+            Text("Equipo Ci-Gestión", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = DeepAzure)
+            Spacer(Modifier.height(16.dp))
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(contacts) { ContactItemCard(it) { viewModel.selectContact(it, miId) } }
+            }
+        }
+    } else {
+        ConversationView(contact = selectedContact!!, messages = messages, onBack = { viewModel.clearSelection() }, onSend = { viewModel.sendMessage(miId, selectedContact!!.id, it) })
+    }
+}
+
+@Composable
+fun ContactItemCard(contact: com.example.appmovil.data.remote.UserContact, onClick: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth().clickable { onClick() }, shape = RoundedCornerShape(12.dp), color = Color.White, border = BorderStroke(1.dp, LightAzure.copy(0.3f))) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(SoftAzure.copy(0.1f)), contentAlignment = Alignment.Center) { Text(contact.nombre.take(1).uppercase()) }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(contact.nombre, fontWeight = FontWeight.Bold)
+                Text(contact.rol.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight)
+            }
+            if (contact.unreadCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(ErrorRed),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = contact.unreadCount.toString(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ConversationView(contact: com.example.appmovil.data.remote.UserContact, messages: List<com.example.appmovil.data.remote.MessageItem>, onBack: () -> Unit, onSend: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(messages.size) { if(messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1) }
+
+    Column(Modifier.fillMaxSize()) {
+        Surface(shadowElevation = 2.dp, color = Color.White) {
+            Row(Modifier.padding(8.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null) }
+                Text(contact.nombre, fontWeight = FontWeight.Bold)
+            }
+        }
+        LazyColumn(state = listState, modifier = Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 16.dp)) {
+            items(messages) { msg ->
+                val isMio = msg.esMio
+                Box(Modifier.fillMaxWidth(), contentAlignment = if(isMio) Alignment.CenterEnd else Alignment.CenterStart) {
+                    Surface(color = if(isMio) SoftAzure else Color(0xFFF1F5F9), shape = RoundedCornerShape(12.dp)) {
+                        Text(msg.mensaje, modifier = Modifier.padding(12.dp), color = if(isMio) Color.White else TextDark)
+                    }
+                }
+            }
+        }
+        Surface(color = Color.White, modifier = Modifier.imePadding()) {
+            Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextField(value = text, onValueChange = { text = it }, modifier = Modifier.weight(1f), placeholder = { Text("Escribe...") }, shape = RoundedCornerShape(24.dp), colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
+                IconButton(onClick = { if(text.isNotBlank()){ onSend(text); text = "" } }) { Icon(Icons.Default.Send, null, tint = SoftAzure) }
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyStateView(sec: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(if(sec=="inicio") "Sin actividades pendientes" else "Historial vacío", color = TextLight) }
+}
+@Composable
+fun AssignSatelliteDialog(
+    solicitudId: Int,
+    sot: String,
+    satellites: List<com.example.appmovil.data.remote.SatelliteStatusItem>,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(24.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Column(Modifier.padding(24.dp)) {
+                Text("Asignar Orden #$sot", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = DeepAzure)
+                Text("Selecciona el satélite para asignar esta tarea.", style = MaterialTheme.typography.bodyMedium, color = TextLight)
+                Spacer(Modifier.height(16.dp))
+                LazyColumn(modifier = Modifier.fillMaxHeight(0.6f)) {
+                    val sortedSats = satellites.sortedByDescending { it.estado == "Disponible" }
+                    items(sortedSats) { sat ->
+                        val isDisp = sat.estado == "Disponible"
+                        val color = if(isDisp) SuccessGreen else ErrorRed
+                        Surface(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onConfirm(sat.id) }, shape = RoundedCornerShape(12.dp), color = Color(0xFFF8FAFC), border = BorderStroke(1.dp, color.copy(0.3f))) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(36.dp).clip(CircleShape).background(color.copy(0.1f)), contentAlignment = Alignment.Center) { Text(sat.nombre.take(1).uppercase(), color = color, fontWeight = FontWeight.Bold) }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(sat.nombre, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                    Text(sat.estado ?: "---", color = color, style = MaterialTheme.typography.labelSmall)
+                                }
+                                Icon(Icons.Default.ChevronRight, null, tint = TextLight.copy(0.5f))
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("CANCELAR", color = TextLight) }
+            }
+        }
+    }
+}
+@Composable
+fun ZonificacionDialog(
+    satelliteName: String,
+    currentZone: String,
+    availableZones: List<com.example.appmovil.data.remote.ZoneItem>,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(24.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Column(Modifier.padding(24.dp)) {
+                Text("Zonificar a $satelliteName", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = DeepAzure)
+                Text("Actual: $currentZone", style = MaterialTheme.typography.bodySmall, color = SoftAzure)
+                Spacer(Modifier.height(16.dp))
+                LazyColumn(modifier = Modifier.fillMaxHeight(0.5f)) {
+                    items(availableZones) { zone ->
+                        Surface(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onConfirm(zone.nombre) }, shape = RoundedCornerShape(12.dp), color = Color(0xFFF1F5F9)) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.LocationOn, null, tint = SoftAzure, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Text(zone.nombre, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("CERRAR") }
+            }
+        }
+    }
+}
+@Composable
+fun ErrorView(msg: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(msg, color = ErrorRed, textAlign = TextAlign.Center, modifier = Modifier.padding(32.dp)) }
+}
