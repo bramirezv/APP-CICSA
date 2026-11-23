@@ -66,7 +66,7 @@ Todos se comunican por **HTTPS** contra `https://www.cicsamovil.com` (Hostinger)
 - Seguimiento tipo Uber (`TicketTrackingScreen`): buscando satélite → en camino → llegado, con mapa y barra de progreso (polling cada 4 s).
 
 **GPS y notificaciones**
-- `LocationService`:/envía lat/lng cada **10 s** con `PRIORITY_HIGH_ACCURACY`.
+- `LocationService`: envía lat/lng cada **10 s** con `PRIORITY_HIGH_ACCURACY`.
 - `SolicitudPollingService`: consulta nuevas SOTs, mensajes y tickets aceptados cada **5 s** y muestra notificaciones con el sonido `alerta_mision.mp3`.
 - Ambos son **foreground services** (notificación persistente) con WakeLock para que el celular no los duerma.
 

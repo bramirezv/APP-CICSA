@@ -10,7 +10,8 @@
 --   2) mysql -u root -p < database/schema.sql
 --      (o pega este archivo en phpMyAdmin → Importar)
 --   3) Pon el mismo nombre de BD, usuario y password en api/db_config.php.
---   4) Crea el usuario admin con el INSERT de la línea ~180 (o desderegister.php).
+--   4) Crea el usuario admin con el INSERT indicado al final de este archivo
+--      (o desde api/register.php).
 --
 -- NOTA: El repositorio no trae scripts de creación para las tablas base.
 --       Este archivo las crea todas con todas las columnas que el código usa,
