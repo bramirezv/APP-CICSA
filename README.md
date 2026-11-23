@@ -2,7 +2,10 @@
 
 > Plataforma **Field Service Management (FSM)** para gestionar, despachar y monitorear en tiempo real al personal de campo ("Satélites"): órdenes de servicio (SOT), GPS en vivo, asistencia, chat interno y reportes Excel.
 
-**Versión:** 1.0 (`versionCode: 4`) · **Documentación completa:** [DOCUMENTACION_TECNICA.md](./DOCUMENTACION_TECNICA.md)
+**Versión:** 1.0 (`versionCode: 4`)
+
+📘 **Empieza aquí:** [Guía completa de instalación y funcionamiento](./GUIA_INSTALACION_Y_FUNCIONAMIENTO.md) — explica qué hace el sistema y cómo instalar BD, API, dashboard y app paso a paso.
+📖 Referencia técnica: [DOCUMENTACION_TECNICA.md](./DOCUMENTACION_TECNICA.md) · 🗄️ Esquema listo para importar: [database/schema.sql](./database/schema.sql)
 
 ---
 
@@ -29,6 +32,8 @@ El **dashboard web** es el centro de control corporativo: mapa con todas las ubi
 | [`app/`](./app/) | Kotlin · Jetpack Compose · Material 3 | App Android (móvil) para satélites, supervisores y admins |
 | [`dashboard/`](./dashboard/) | React 19 · Vite 8 · Tailwind 4 · Leaflet | Panel web de administración |
 | [`api/`](./api/) | PHP 8 · MySQL | 68 scripts de API REST, migraciones, reportes y utilidades |
+| [`database/`](./database/) | SQL | `schema.sql` con el DDL completo de las 8 tablas y las zonas iniciales |
+| `GUIA_INSTALACION_Y_FUNCIONAMIENTO.md` | Markdown | Guía práctica: qué hace el sistema e instalación paso a paso |
 | `DOCUMENTACION_TECNICA.md` | Markdown | Especificación completa: endpoints, BD, flujos, despliegue y seguridad |
 | `PRESENTACION_APPMOVIL.doc` | Word | Presentación del producto |
 
